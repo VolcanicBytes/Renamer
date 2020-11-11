@@ -1,0 +1,88 @@
+{
+	"name": "occurrences-jumper",
+	"displayName": "Occurrences Jumper",
+	"description": "It jumps trough occurrences",
+	"publisher": "VolcanicBytes",
+	"version": "0.0.1",
+	"repository": {
+		"url": "https://github.com/VolcanicBytes/OccurrencesJumper",
+		"type": "git"
+	},
+	"engines": {
+		"vscode": "^1.32.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onCommand:occurrences-jumper.next",
+		"onCommand:occurrences-jumper.previous"
+	],
+	"galleryBanner": {
+		"color": "#000000",
+		"theme": "dark"
+	},
+	"main": "./dist/extension.js",
+	"contributes": {
+		"commands": [
+			{
+				"command": "occurrences-jumper.next",
+				"title": "Jump next highlight",
+				"category": "Occurrences Jumper",
+				"enablement": "editorTextFocus"
+			},
+			{
+				"command": "occurrences-jumper.previous",
+				"title": "Jump previous highlight",
+				"category": "Occurrences Jumper",
+				"enablement": "editorTextFocus"
+			},
+			{
+				"command": "occurrences-jumper.toggleJumpMode",
+				"title": "Toggle Mode",
+				"category": "Occurrences Jumper",
+				"enablement": "editorTextFocus"
+			}
+		],
+		"keybindings": [
+			{
+				"command": "occurrences-jumper.next",
+				"key": "Ctrl+Shift+Down",
+				"when": "editorTextFocus"
+			},
+			{
+				"command": "occurrences-jumper.previous",
+				"key": "Ctrl+Shift+Up",
+				"when": "editorTextFocus"
+			}
+		],
+		"configuration": {
+			"title": "Occurrences Jumper",
+			"properties": {
+				"occurrences-jumper.useDirectJump": {
+					"type": "boolean",
+					"default": false,
+					"markdownDescription": "Force the Jumper to jump always with selected text, ignoring the `vscode.executeDocumentHighlights` method"
+				}
+			}
+		}
+	
+	},
+	"scripts": {
+		"vscode:prepublish": "webpack --mode production",
+		"webpack": "webpack --mode none",
+		"webpack-dev": "webpack --mode none --watch",
+		"postinstall": "node ./node_modules/vscode/bin/install"
+	},
+	"devDependencies": {
+		"@types/mocha": "^5.2.7",
+		"@types/node": "^12.12.18",
+		"ts-loader": "^6.2.1",
+		"tslint": "^5.20.1",
+		"typescript": "^3.7.3",
+		"vscode": "^1.1.36",
+		"webpack": "^4.41.3",
+		"webpack-cli": "^3.3.10"
+	},
+	"dependencies": {}
+}
