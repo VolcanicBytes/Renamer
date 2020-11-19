@@ -1,11 +1,11 @@
 {
-	"name": "occurrences-jumper",
-	"displayName": "Occurrences Jumper",
-	"description": "It jumps trough occurrences",
+	"name": "renamer",
+	"displayName": "Renamer",
+	"description": "Rename file after class rename operation",
 	"publisher": "VolcanicBytes",
 	"version": "0.0.1",
 	"repository": {
-		"url": "https://github.com/VolcanicBytes/OccurrencesJumper",
+		"url": "https://github.com/VolcanicBytes/Renamer",
 		"type": "git"
 	},
 	"engines": {
@@ -15,8 +15,8 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onCommand:occurrences-jumper.next",
-		"onCommand:occurrences-jumper.previous"
+		"onStartupFinished",
+		"onCommand:renamer.rename-current-file"
 	],
 	"galleryBanner": {
 		"color": "#000000",
@@ -26,47 +26,28 @@
 	"contributes": {
 		"commands": [
 			{
-				"command": "occurrences-jumper.next",
-				"title": "Jump next highlight",
-				"category": "Occurrences Jumper",
+				"command": "renamer.rename-current-file",
+				"title": "Rename current file",
+				"category": "Renamer",
 				"enablement": "editorTextFocus"
-			},
-			{
-				"command": "occurrences-jumper.previous",
-				"title": "Jump previous highlight",
-				"category": "Occurrences Jumper",
-				"enablement": "editorTextFocus"
-			},
-			{
-				"command": "occurrences-jumper.toggleJumpMode",
-				"title": "Toggle Mode",
-				"category": "Occurrences Jumper",
-				"enablement": "editorTextFocus"
-			}
-		],
-		"keybindings": [
-			{
-				"command": "occurrences-jumper.next",
-				"key": "Ctrl+Shift+Down",
-				"when": "editorTextFocus"
-			},
-			{
-				"command": "occurrences-jumper.previous",
-				"key": "Ctrl+Shift+Up",
-				"when": "editorTextFocus"
 			}
 		],
 		"configuration": {
-			"title": "Occurrences Jumper",
+			"title": "Renamer",
 			"properties": {
-				"occurrences-jumper.useDirectJump": {
+				"renamer.enabled": {
 					"type": "boolean",
-					"default": false,
-					"markdownDescription": "Force the Jumper to jump always with selected text, ignoring the `vscode.executeDocumentHighlights` method"
+					"default": true,
+					"markdownDescription": "Allow the renamer to automatically prompt for suggestion after a rename operation is performed",
+					"title": "Enabled"
+				},
+				"renamer.ignoredLanguageIdList": {
+					"type": "array",
+					"markdownDescription": "Set what languageId vscode should ignore when detecting changed symbols.",
+					"title": "Blacklist"
 				}
 			}
 		}
-	
 	},
 	"scripts": {
 		"vscode:prepublish": "webpack --mode production",
@@ -84,5 +65,7 @@
 		"webpack": "^4.41.3",
 		"webpack-cli": "^3.3.10"
 	},
-	"dependencies": {}
+	"dependencies": {
+		"case": "^1.6.3"
+	}
 }

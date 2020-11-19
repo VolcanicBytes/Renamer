@@ -1,164 +1,103 @@
 import * as vscode from 'vscode';
+import * as Case from 'case';
+import * as path from 'path';
+import { QuickInputProxy } from './quickInputProxy';
+import { DocumentChangeTracker } from './documentChangeTracker';
+import { DocumentChangeItem } from './documentChangeItem';
+import { DocumentTokenizer } from './documentTokenizer';
+import { Settings } from './Settings';
+
+const proxy: QuickInputProxy = new QuickInputProxy(RenameCurrentFile);
 
 export function activate(context: vscode.ExtensionContext) {
 
-	let directJump: boolean = getDirectJumpPref();
+
+	const tracker: DocumentChangeTracker = new DocumentChangeTracker(onDidChangeDetected);
+
+	Settings.Initialize();
 
 	context.subscriptions.push(
-		vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('occurrences-jumper'))
-				directJump = getDirectJumpPref();
+		Settings.Subscribe(context),
+		vscode.window.onDidChangeActiveTextEditor((e) => {
+			tracker.Reset();
 		}),
-		vscode.commands.registerCommand('occurrences-jumper.toggleJumpMode', async () => {
-			directJump = !directJump;
-			setDirectJumpPref(directJump);
+		vscode.workspace.onDidSaveTextDocument((e) => {
+			tracker.Trigger(e);
 		}),
-		vscode.commands.registerCommand('occurrences-jumper.next', async () => {
+		vscode.workspace.onDidChangeTextDocument((e) => {
+			tracker.Update(e);
+		}),
+		vscode.commands.registerCommand('renamer.rename-current-file', async () => {
 			try {
 				const textEditor = vscode.window.activeTextEditor;
 				if (textEditor === undefined || textEditor.selection === undefined)
 					return;
-				// tokenizeCurrentDocument();
-
 				const doc = textEditor.document;
-				const activeRange = new vscode.Range(textEditor.selection.start, textEditor.selection.end);
-				var selectedText = doc.getText(textEditor.selection);
-				if (!directJump) {
-					if (await directJumpNext(doc, textEditor, activeRange))
-						return;
-				}
-				var lastLine = doc.lineAt(doc.lineCount - 1);
-				var text = doc.getText(new vscode.Range(textEditor.selection.start, lastLine.range.end));
-
-				var startOffset = doc.offsetAt(textEditor.selection.active) - selectedText.length;
-				var index = text.indexOf(selectedText, selectedText.length);
-				if (index === -1) {
-					text = doc.getText(new vscode.Range(new vscode.Position(0, 0), textEditor.selection.start));
-					index = text.indexOf(selectedText);
-					startOffset = 0;
-					if (index === -1)
-						return;
-				}
-
-				const offset = startOffset + index;
-				const endOffset = offset + selectedText.length;
-				textEditor.selection = new vscode.Selection(doc.positionAt(offset), doc.positionAt(endOffset));
-				textEditor.revealRange(textEditor.selection);
+				const symbols = await DocumentTokenizer.tokenizeCurrentDocument();
+				const items = expandItems(symbols);
+				proxy.Show(path.basename(doc.uri.fsPath), items);
 			} catch (err) {
-				vscode.window.showErrorMessage("jumping error: {" + err + "}");
+				vscode.window.showErrorMessage("renaming error: {" + err + "}");
 			}
-		}),
-		vscode.commands.registerCommand('occurrences-jumper.previous', async () => {
-			try {
-				const textEditor = vscode.window.activeTextEditor;
-				if (textEditor === undefined || textEditor.selection === undefined)
-					return;
-				// tokenizeCurrentDocument();
-				const doc = textEditor.document;
-				const selection = doc.getText(textEditor.selection);
-
-				const activeRange = new vscode.Range(textEditor.selection.start, textEditor.selection.end);
-				if (!directJump) {
-					if (await directJumpPrevious(doc, textEditor, activeRange))
-						return;
-				}
-
-				let text = doc.getText(new vscode.Range(new vscode.Position(0, 0), textEditor.selection.start));
-
-				let startOffset = 0;
-				var index = text.lastIndexOf(selection);
-				if (index === -1) {
-					var lastLine = doc.lineAt(doc.lineCount - 1);
-					text = doc.getText(new vscode.Range(textEditor.selection.end, lastLine.range.end));
-					index = text.lastIndexOf(selection);
-					startOffset = doc.offsetAt(textEditor.selection.active);
-					if (index === -1)
-						return;
-				}
-
-				const offset = startOffset + index;
-				const endOffset = offset + selection.length;
-				textEditor.selection = new vscode.Selection(textEditor.document.positionAt(offset), textEditor.document.positionAt(endOffset));
-				textEditor.revealRange(textEditor.selection);
-			} catch (err) {
-				vscode.window.showErrorMessage("jumping error: {" + err + "}");
-			}
-		}),
-
+		})
 	);
-
-	async function directJumpNext(doc: vscode.TextDocument, textEditor: vscode.TextEditor, activeRange: vscode.Range) {
-		const places: vscode.DocumentHighlight[] = await getPlaces(doc.uri, textEditor.selection.active);
-		if (places.length > 1) {
-			const placeList = places;
-			const placeListCount = placeList.length;
-			let currentPosition = 0;
-			for (let i = 0; i < placeListCount; i++) {
-				const place = placeList[i];
-				if (place.range.isEqual(activeRange)) {
-					currentPosition = i;
-					break;
-				}
-			}
-
-			let place = currentPosition == placeList.length - 1 ? placeList[0] : placeList[currentPosition + 1];
-			textEditor.selection = new vscode.Selection(place.range.start, place.range.end);
-			textEditor.revealRange(textEditor.selection);
-			return true;
-		}
-		return false;
-	}
-	async function directJumpPrevious(doc: vscode.TextDocument, textEditor: vscode.TextEditor, activeRange: vscode.Range) {
-		const places: vscode.DocumentHighlight[] = await getPlaces(doc.uri, textEditor.selection.active);
-		if (places.length > 1) {
-			const placeList = places;
-			const placeListCount = placeList.length;
-			let currentPosition = 0;
-			for (let i = 0; i < placeListCount; i++) {
-				const place = placeList[i];
-				if (place.range.isEqual(activeRange)) {
-					currentPosition = i;
-					break;
-				}
-			}
-
-			let place = currentPosition > 0 ? placeList[currentPosition - 1] : placeList[placeList.length - 1];
-			textEditor.selection = new vscode.Selection(place.range.start, place.range.end);
-			textEditor.revealRange(textEditor.selection);
-			return true;
-		}
-		return false;
-	}
 }
-
-let tokens: Array<string> = new Array();
-
-async function getPlaces(uri: vscode.Uri, position: vscode.Position): Promise<vscode.DocumentHighlight[]> {
-	return await vscode.commands.executeCommand<vscode.DocumentHighlight[]>('vscode.executeDocumentHighlights', uri, position) ?? new Array<vscode.DocumentHighlight>();
-}
-
-function getDirectJumpPref(): boolean {
-	return vscode.workspace.getConfiguration('occurrences-jumper').get<boolean>('useDirectJump', false);
-}
-function setDirectJumpPref(value: boolean) {
-	return vscode.workspace.getConfiguration('occurrences-jumper').update('useDirectJump', value);
-}
-
-async function tokenizeCurrentDocument() {
-	tokens = new Array();
+async function RenameCurrentFile(newName: string) {
 	const textEditor = vscode.window.activeTextEditor;
-	if (!textEditor)
+	if (textEditor === undefined || textEditor.selection === undefined)
 		return;
-	const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', textEditor.document.uri);
-	if (!symbols)
-		return;
-	for (let i = 0; i < symbols.length; i++) {
-		const s = symbols[i];
-		if (s.kind == vscode.SymbolKind.Variable) {
-			const range = s.range;
-			tokens.push(s.name);
-		}
+
+	const doc = textEditor.document;
+	const ext = path.extname(doc.uri.fsPath);
+	let resultingName: string = `${newName}${ext}`;
+	if (newName.includes('.'))
+		resultingName = newName;
+	const uri = vscode.Uri.file(path.join(path.dirname(doc.uri.fsPath), resultingName));
+
+	const selection = vscode.window.activeTextEditor?.selection;
+	const edit = new vscode.WorkspaceEdit();
+	edit.renameFile(doc.uri, uri, { overwrite: true });
+	return await vscode.workspace.applyEdit(edit).then(() => {
+		const textEditor = vscode.window.activeTextEditor;
+		if (selection && textEditor)
+			textEditor.selections = [selection];
+		return vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+	});
+}
+
+function expandItems(tokens: DocumentChangeItem[]): vscode.QuickPickItem[] {
+	const quickPickItems = new Array<vscode.QuickPickItem>();
+	const tokensCount = tokens.length;
+	for (let i = 0; i < tokensCount; i++) {
+		const token = tokens[i];
+		quickPickItems.push(...expandItem(token));
 	}
+	return quickPickItems;
+}
+function expandItem(token: DocumentChangeItem): vscode.QuickPickItem[] {
+	const quickPickItems = new Array<vscode.QuickPickItem>();
+	quickPickItems.push({ label: token.name, description: 'unchanged' });
+	quickPickItems.push({ label: Case.upper(token.name), description: 'upper' });
+	quickPickItems.push({ label: Case.lower(token.name), description: 'lower' });
+	quickPickItems.push({ label: Case.capital(token.name), description: 'capital' });
+	quickPickItems.push({ label: Case.snake(token.name), description: 'snake' });
+	quickPickItems.push({ label: Case.pascal(token.name), description: 'pascal' });
+	quickPickItems.push({ label: Case.camel(token.name), description: 'camel' });
+	quickPickItems.push({ label: Case.kebab(token.name), description: 'kebab' });
+	quickPickItems.push({ label: Case.header(token.name), description: 'header' });
+	quickPickItems.push({ label: Case.constant(token.name), description: 'constant' });
+	quickPickItems.push({ label: Case.title(token.name), description: 'title' });
+	quickPickItems.push({ label: Case.sentence(token.name), description: 'sentence' });
+	quickPickItems.push({ label: Case.flip(token.name), description: 'flip' });
+	quickPickItems.push({ label: Case.random(token.name), description: 'random' });
+
+	return quickPickItems;
+}
+
+function onDidChangeDetected(docPath: string, item: DocumentChangeItem) {
+	const items = expandItem(item);
+	vscode.window.activeTextEditor
+	proxy.Show(path.basename(docPath), items);
 }
 
 export function deactivate() { }

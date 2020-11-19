@@ -1,6 +1,27 @@
-# Occurrences Jumper
+# Renamer
 
-This extension allows you to cycle to highlighted words matching the selected text :
-- [Occurrences Jumper: Jump next highlight](#occurrences-jumper.next)(<kbd>ctrl+shift+down</kbd>)
-- [Occurrences Jumper: Jump previous highlight](#occurrences-jumper.previous)(<kbd>ctrl+shift+up</kbd>)
-- Try [Occurrences Jumper: Toggle Mode](#occurrences-jumper.toggleJumpMode) if you need a wider and less precise jump
+This extension allows you to rename a file when you change the most important symbols and save it.\
+\
+For example: you change a class name.\
+After you hit **save**, you realize that the file name doesn't match the contained class.\
+You should rename the file but how ?\
+Two options:
+1) open the Explorer sidebar, locate the file(manually or with the command `Reveal in Side Bar`) 
+2) Use the [FileUtils]( https://marketplace.visualstudio.com/items?itemName=sleistner.vscode-fileutils)  `fileutils.renameFile` command
+
+This extension introduces two new options:
+
+1) [Renamer: Rename current file](#renamer.rename-current-file) command
+   1) which varies from the FileUtils one, because it displays a bunch of names in different case, plus allow the extension to be changed manually
+2) But more remarkable: **it automatically shows a picker for a new filename when it detects a change in a main symbol after a save**
+
+## Remarks
+
+* It only works with languages that provide document Highlights and are not in the `ignoredLanguageIdList`
+* It tries to detect changes based on the position of the main symbols
+
+## Credits
+
+*   https://www.npmjs.com/package/case
+*   https://marketplace.visualstudio.com/items?itemName=sleistner.vscode-fileutils
+*   https://marketplace.visualstudio.com/items?itemName=VolcanicBytes.occurrences-jumper
