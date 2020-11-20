@@ -15,10 +15,12 @@ This extension introduces two new options:
    1) which varies from the FileUtils one, because it displays a bunch of names in different case, plus allow the extension to be changed manually
 2) But more remarkable: **it automatically shows a picker for a new filename when it detects a change in a main symbol after a save**
 
-## Remarks
+## Known issues
 
 * It only works with languages that provide document Highlights and are not in the `ignoredLanguageIdList`
 * It tries to detect changes based on the position of the main symbols
+* In order for this extension to automatically prompt for new file names, symbol provider should be installed.
+  * Javascript and Typescript work out of the box
 
 ## Credits
 

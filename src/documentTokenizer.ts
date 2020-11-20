@@ -3,6 +3,19 @@ import { DocumentChangeItem } from './documentChangeItem';
 
 export class DocumentTokenizer {
 
+    static recursiveTokenize(symbols: vscode.DocumentSymbol[], tokens: Array<DocumentChangeItem>) {
+        for (let i = 0; i < symbols.length; i++) {
+            const s = symbols[i];
+            if (s.kind == vscode.SymbolKind.Namespace) {
+                this.recursiveTokenize(s.children, tokens);
+            }
+            else {
+                const item = new DocumentChangeItem(s.kind, s.selectionRange, s.name);
+                tokens.push(item);
+            }
+        }
+    }
+
     static async tokenizeCurrentDocument() {
         const tokens: Array<DocumentChangeItem> = new Array();
 
@@ -14,9 +27,13 @@ export class DocumentTokenizer {
             return tokens;
         for (let i = 0; i < symbols.length; i++) {
             const s = symbols[i];
-
-            const item = new DocumentChangeItem(s.kind, s.selectionRange, s.name);
-            tokens.push(item);
+            if (s.kind == vscode.SymbolKind.Namespace) {
+                this.recursiveTokenize(s.children, tokens);
+            }
+            else {
+                const item = new DocumentChangeItem(s.kind, s.selectionRange, s.name);
+                tokens.push(item);
+            }
 
             // enum SymbolKind {
             //     File = 0,
@@ -62,7 +79,7 @@ export class DocumentTokenizer {
         const count = tokens.length;
         for (let i = 0; i < count; i++) {
             const item = tokens[i];
-            
+
             if ((item.region.intersection(region) || region.intersection(item.region))) {
                 return new DocumentChangeItem(item.symbol, item.region, item.name);
             }
