@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { DocumentChangeItem } from './documentChangeItem';
+import { Settings } from './Settings';
 
 export class DocumentTokenizer {
 
@@ -22,9 +23,11 @@ export class DocumentTokenizer {
         const textEditor = vscode.window.activeTextEditor;
         if (!textEditor)
             return tokens;
-        const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', textEditor.document.uri);
-        if (!symbols)
-            return tokens;
+
+        const symbols = Settings.ForceRegex ? undefined : await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', textEditor.document.uri);
+        if (!symbols) {
+            return this.tokenizeWithRegex(textEditor.document);
+        }
         for (let i = 0; i < symbols.length; i++) {
             const s = symbols[i];
             if (s.kind == vscode.SymbolKind.Namespace) {
@@ -68,6 +71,43 @@ export class DocumentTokenizer {
             //     const item = new DocumentChangeItem(s.kind, s.selectionRange, s.name);
             //     tokens.push(item);
             // }
+        }
+
+        return tokens;
+    }
+    static tokenizeWithRegex(document: vscode.TextDocument) {
+        const tokens: Array<DocumentChangeItem> = new Array();
+        const text = document.getText();
+        const regexList = Settings.RegexList;
+        const regexListCount = regexList.length;
+        for (let index = 0; index < regexListCount; index++) {
+            const regexItem = regexList[index];
+            if (regexItem.languageId !== document.languageId || !regexItem.regex)
+                continue;
+
+            const itemList = regexItem.regex;
+            const itemListCount = itemList.length;
+            for (let i = 0; i < itemListCount; i++) {
+                const regexBody = itemList[i];
+                const group: number = regexItem.captureGroup != undefined && regexItem.captureGroup.length > i ? regexItem.captureGroup[i] : 1;
+                let match = null;
+                const regex = new RegExp(regexBody, 'g');
+                while ((match = regex.exec(text)) != null) {
+                    try {
+                        const position = document.positionAt(match.index)
+                        const line = document.lineAt(position.line);
+                        const lineText = line.text;
+                        const name = match[group];
+                        const wordStartOffset = lineText.search(name);
+                        const startPos = new vscode.Position(line.lineNumber, wordStartOffset);
+                        const endPos = new vscode.Position(line.lineNumber, wordStartOffset + name.length);
+                        const range = new vscode.Range(startPos, endPos);
+                        tokens.push(new DocumentChangeItem(vscode.SymbolKind.Class, range, name.trim()))
+                    } catch (error) {
+                        console.log(error);
+                    }
+                }
+            }
         }
 
         return tokens;

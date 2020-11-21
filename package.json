@@ -3,7 +3,7 @@
 	"displayName": "Renamer",
 	"description": "Rename file after class rename operation",
 	"publisher": "VolcanicBytes",
-	"version": "0.0.2",
+	"version": "0.1.0",
 	"repository": {
 		"url": "https://github.com/VolcanicBytes/Renamer",
 		"type": "git"
@@ -43,8 +43,27 @@
 				},
 				"renamer.ignoredLanguageIdList": {
 					"type": "array",
-					"markdownDescription": "Set what languageId vscode should ignore when detecting changed symbols.",
-					"title": "Blacklist"
+					"markdownDescription": "Set what [`languageId`](https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers) vscode should ignore when detecting changed symbols.",
+					"title": "Blacklist",
+					"default": [
+						"json",
+						"markdown",
+						"xml"
+					]
+				},
+				"renamer.regexList": {
+					"type": "array",
+					"markdownDescription": "Set per [`languageId`](https://code.visualstudio.com/docs/languages/identifiers#_known-language-identifiers) valid `regex` an [`captureGroup`]",
+					"examples": [
+						"{\"languageId\":\"csharp\",\"regex\":[\"class ([^{])+\\s*{\",\"interface ([^{])+\\s*{\"],\"captureGroup\":[1,1]}"
+					],
+					"title": "Regex List"
+				},
+				"renamer.forceRegex": {
+					"type": "boolean",
+					"markdownDescription": "Set whether to skip highlights and use `regexList`",
+					"title": "Force Regex",
+					"default": false
 				}
 			}
 		}
